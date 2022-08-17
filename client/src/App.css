@@ -1,3 +1,7 @@
+:root {
+  --primary:#7A003C;
+  --secondary:#5E6A71;
+}
 .App {
   text-align: center;
 }
@@ -13,19 +17,27 @@
   }
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
 .App-link {
   color: #61dafb;
+}
+
+.nav-inactive {
+  color: inherit; /* blue colors for links too */
+  text-decoration: inherit; /* no underline */
+}
+
+.nav-active {
+  color: var(--primary);
+  text-decoration: inherit; /* no underline */
+}
+
+a {
+  color: var(--primary);
+}
+
+.nav-active-alt {
+  color: var(--secondary);
+  text-decoration: inherit; /* no underline */
 }
 
 @keyframes App-logo-spin {
