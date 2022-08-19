@@ -1,11 +1,11 @@
 import './App.css';
 import * as React from 'react';
-import ReactDOM from "react-dom/client";
 import {
   BrowserRouter,
   Routes,
   Route,
-  NavLink
+  NavLink,
+  Navigate
 } from "react-router-dom";
 import { 
   AppBar, 
@@ -15,20 +15,23 @@ import {
   Typography,
   Menu,
   Container,
-  Avatar,
+//   Avatar,
   Button,
-  Tooltip,
+//   Tooltip,
   MenuItem,
   ThemeProvider,
   Paper
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CrisisAlertIcon from '@mui/icons-material/CrisisAlert';
-import AdbIcon from '@mui/icons-material/Adb';
 import { theme } from "./theme.js";
 
+import Home from './pages/Home.js';
+import About from './pages/About.js';
+import Contact from './pages/Contact.js';
+
 const pages = ['Home', 'About', 'Contact'];
-const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
+// const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
 
 
 function App() {
@@ -37,22 +40,22 @@ function App() {
   let inactiveClassName = "nav-inactive";
   let siteName = "SeatWatch";
   const [anchorElNav, setAnchorElNav] = React.useState(null);
-  const [anchorElUser, setAnchorElUser] = React.useState(null);
+//   const [anchorElUser, setAnchorElUser] = React.useState(null);
 
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
   };
-  const handleOpenUserMenu = (event) => {
-    setAnchorElUser(event.currentTarget);
-  };
-
   const handleCloseNavMenu = () => {
     setAnchorElNav(null);
   };
 
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
+//   const handleOpenUserMenu = (event) => {
+//     setAnchorElUser(event.currentTarget);
+//   };
+//   const handleCloseUserMenu = () => {
+//     setAnchorElUser(null);
+//   };
+
   return (
 	<ThemeProvider theme={theme}>
     <BrowserRouter>
@@ -108,7 +111,7 @@ function App() {
 					}}
 					>
 						{pages.map((page) => (
-						<NavLink to={page} color="primary" className={({ isActive }) => isActive ? activeClassName : inactiveClassName}>
+						<NavLink to={page.toLowerCase()} color="primary" className={({ isActive }) => isActive ? activeClassName : inactiveClassName}>
 							<MenuItem key={page} >
 								<Typography textAlign="center">
 								{page}
@@ -139,7 +142,7 @@ function App() {
 					</Typography>
 					<Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
 						{pages.map((page) => (
-							<NavLink to={page} className={({ isActive }) => isActive ? activeClassNameAlt : inactiveClassName} >
+							<NavLink to={page.toLowerCase()} className={({ isActive }) => isActive ? activeClassNameAlt : inactiveClassName} >
 								<Button
 								key={page}
 								sx={{ my: 2, color: "inherit", display: 'block' }}
@@ -191,9 +194,6 @@ function App() {
 				</Toolbar>
 			</Container>
 			</AppBar>
-			<Routes>
-				<Route path="/" element={<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>} />
-			</Routes>
 			<AppBar position="static" style={{marginTop: 'calc(10% + 60px)',
 				position: 'fixed',
 				bottom: 0,
@@ -202,12 +202,17 @@ function App() {
 				}} 
 				color="secondary">
 				<span>
-				{siteName} is not affiliated with <a href="https://www.mcmaster.ca">McMaster University</a>
+				{siteName} and its authors are not affiliated with <a href="https://www.mcmaster.ca">McMaster University</a> and are <a href="https://en.wikipedia.org/wiki/MIT_License#License_terms">not liable</a> for any claim, damages, or other liabilities related to its use.
 				</span>
 				
 			</AppBar>
 		</Paper>
-		
+		<Routes>
+			<Route path="/" element={<Navigate to="/home" />} />
+			<Route path="/home" element={<Home />} />
+			<Route path="/about" element={<About />} />
+			<Route path="/contact" element={<Contact />} />
+		</Routes>
     </BrowserRouter>
 	</ThemeProvider>
   );
