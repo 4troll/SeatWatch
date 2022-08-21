@@ -1,9 +1,19 @@
+const path = require('node:path');
 const { remote } = require('webdriverio');
 const express = require("express");
+const bodyParser = require('body-parser');
 
 const PORT = process.env.PORT || 3001;
 
+const timeout = 1000;
+
 const app = express();
+
+var jsonParser = bodyParser.json();
+
+const middleware = {
+    jsonParser: jsonParser
+}
 
 async function getCourseSections(desiredTermStr, desiredCourseStr) {
 	//const desiredTermStr = "2022 Fall";
@@ -34,16 +44,16 @@ async function getCourseSections(desiredTermStr, desiredCourseStr) {
 	const changeButton = await browser.$("#MCM_SSS_BCC_WRK_SSS_PB_CHANGE");
 
 	await careerDropdown.setValue("Undergraduate");
-	await termChoice.waitForExist({ timeout: 5000 });
+	await termChoice.waitForExist({ timeout: timeout });
 	await termDropdown.setValue("2022 Fall");
 	await changeButton.click();
 
 	const courseGroup = await browser.$("#win0divDERIVED_SSS_BCC_GROUP_DETAIL");
-	await courseGroup.waitForExist({ timeout: 5000 });
+	await courseGroup.waitForExist({ timeout: timeout });
 	await browser.execute(`submitAction_win0(document.win0,'DERIVED_SSS_BCC_SSR_ALPHANUM_${firstChar}')`, undefined);
 	
 	const desiredCourseGroup = await browser.$(`*=${courseGroupText}`);
-	await desiredCourseGroup.waitForExist({ timeout: 5000 });
+	await desiredCourseGroup.waitForExist({ timeout: timeout });
 	desiredCourseGroup.click();
 	
 	const desiredCourseNum = await browser.$(`=${courseTagText}`);
@@ -61,11 +71,11 @@ async function getCourseSections(desiredTermStr, desiredCourseStr) {
 	await termDropdown2.setValue("2022 Fall");
 
 	const submitButton = await browser.$("[value='Show Sections']");
-	await submitButton.waitForExist({ timeout: 5000 });
+	await submitButton.waitForExist({ timeout: timeout });
 	await submitButton.click();
 
 	const gridLabelWait = await browser.$(`td*=sections for ${desiredTermStr}`)
-	await gridLabelWait.waitForExist({ timeout: 5000 });
+	await gridLabelWait.waitForExist({ timeout: timeout });
 
 
 	const sectionLabels = await browser.$$("a[ptlinktgt='pt_peoplecode']");
@@ -81,11 +91,37 @@ async function getCourseSections(desiredTermStr, desiredCourseStr) {
 	}));
 
 	// turn into dictionary
-	var result = {}
-	sectionTextArray.forEach((key, i) => result[key] = statusTextArray[i]);
+	var result = []
+	sectionTextArray.forEach((key, i) => {
+		result[i] = {
+			"section": key,
+			"status": statusTextArray[i]
+		};
+	});
 	console.log(result);
 	return result;
 }
+
+app.post('/api/getCourse', [middleware.jsonParser], async (req, res) => {
+	if (req) {
+		try {
+			var body = req.body;
+			var term = body.term;
+			var course = body.course;
+			console.log(body);
+			const response = await getCourseSections(term, course);
+			res.json(response);
+			res.status(100);
+		}
+		catch(err) {
+			res.status(404).send(err);
+		}
+		finally {
+
+		}
+	}
+	//res.sendFile(path.resolve(__dirname, 'client', 'index.html'));
+});
 
 app.use("/static", express.static("client"));
 
@@ -94,5 +130,5 @@ app.listen(PORT, () => {
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'client', 'index.html'));
+  res.sendFile(path.resolve(__dirname, '../client/public', 'index.html'));
 });
