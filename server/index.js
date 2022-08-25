@@ -1,7 +1,9 @@
 const path = require('node:path');
-const { remote } = require('webdriverio');
 const express = require("express");
 const bodyParser = require('body-parser');
+const mongoose = require("mongoose");
+
+const webdriverio = require('webdriverio');
 
 const PORT = process.env.PORT || 3001;
 
@@ -15,11 +17,55 @@ const middleware = {
     jsonParser: jsonParser
 }
 
-async function getCourseSections(desiredTermStr, desiredCourseStr) {
-	//const desiredTermStr = "2022 Fall";
-	const termArray = desiredTermStr.split(/\s+/);
-	const seasonNum = termArray[1] == "Winter" ? 1 : (termArray[1] == "Spring/Summer" ? 5 : 9);
-	const termNum = `${termArray[0].charAt(0)}${termArray[0].charAt(2)}${termArray[0].charAt(3)}${seasonNum}`;
+const schedule = require('node-schedule');
+
+const job = schedule.scheduleJob('* * * * *', function(){
+  //console.log('test');
+});
+
+const date = new Date();
+const month = date.getMonth();
+const year = date.getFullYear();
+
+const startingSeason = month < 6 ? 0 : (month < 9 ? 1 : 2);
+
+const validTerms = [];
+
+for (let i = 0; i < 4; ++i) {
+	const curYear = `${year + Math.floor((startingSeason + i) / 3)}`
+	const curSzn = (startingSeason + i) % 3
+	const sznText = curSzn === 0 ? "Winter" : (curSzn === 1 ? "Spring/Summer" : "Fall");
+
+	const seasonNum = curSzn == 0 ? 1 : (curSzn == 1 ? 5 : 9);
+	const termNum = `${curYear.charAt(0)}${curYear.charAt(2)}${curYear.charAt(3)}${seasonNum}`;
+
+	validTerms.push(termNum);
+}
+console.log(validTerms);
+const blogSchema = new mongoose.Schema({
+  title:  String, // String is shorthand for {type: String}
+  author: String,
+  body:   String,
+  comments: [{ body: String, date: Date }],
+  date: { type: Date, default: Date.now },
+  hidden: Boolean,
+  meta: {
+    votes: Number,
+    favs:  Number
+  }
+});
+
+
+// desiredTermNum: term number in a string
+async function getCourseSections(desiredTermNum, desiredCourseStr) {
+	// const desiredTermStr = "2022 Fall";
+	// const termArray = desiredTermStr.split(/\s+/);
+	// const seasonNum = termArray[1] == "Winter" ? 1 : (termArray[1] == "Spring/Summer" ? 5 : 9);
+	// const termNum = `${termArray[0].charAt(0)}${termArray[0].charAt(2)}${termArray[0].charAt(3)}${seasonNum}`;
+
+	const seasonStr = desiredTermNum.charAt(3) == 1 ? "Winter" : (desiredTermNum.charAt(3) == 5 ? "Spring/Summer" : "Fall");
+	const desiredTermStr = `20${desiredTermNum.charAt(1)}${desiredTermNum.charAt(2)} ${seasonStr}`
+	console.log(desiredTermStr);
 
 	//const desiredCourseStr = "COMPSCI 2C03";
 	const courseArray = desiredCourseStr.split(/\s+/);
@@ -27,7 +73,7 @@ async function getCourseSections(desiredTermStr, desiredCourseStr) {
 	const courseTagText = courseArray[1];
 	const firstChar = courseGroupText.charAt(0).toUpperCase();
 
-    const browser = await remote({
+    const browser = await webdriverio.remote({
         logLevel: 'trace',
         capabilities: {
             browserName: 'chrome'
@@ -40,12 +86,12 @@ async function getCourseSections(desiredTermStr, desiredCourseStr) {
 
 	const careerDropdown = await browser.$("#MCM_SSS_BCC_WRK_ACAD_CAREER");
 	const termDropdown = await browser.$("#MCM_SSS_BCC_WRK_STRM");
-	const termChoice = await browser.$(`#MCM_SSS_BCC_WRK_STRM option[value='${termNum}']`);
+	const termChoice = await browser.$(`#MCM_SSS_BCC_WRK_STRM option[value='${desiredTermNum}']`);
 	const changeButton = await browser.$("#MCM_SSS_BCC_WRK_SSS_PB_CHANGE");
 
 	await careerDropdown.setValue("Undergraduate");
 	await termChoice.waitForExist({ timeout: timeout });
-	await termDropdown.setValue("2022 Fall");
+	await termDropdown.setValue(desiredTermStr);
 	await changeButton.click();
 
 	const courseGroup = await browser.$("#win0divDERIVED_SSS_BCC_GROUP_DETAIL");
@@ -68,7 +114,7 @@ async function getCourseSections(desiredTermStr, desiredCourseStr) {
 	await goButton.click();
 
 	const termDropdown2 = await browser.$("#DERIVED_SAA_CRS_TERM_ALT");
-	await termDropdown2.setValue("2022 Fall");
+	await termDropdown2.setValue(desiredTermStr);
 
 	const submitButton = await browser.$("[value='Show Sections']");
 	await submitButton.waitForExist({ timeout: timeout });

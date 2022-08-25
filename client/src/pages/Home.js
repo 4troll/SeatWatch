@@ -179,11 +179,13 @@ export default function Home(){
                                         {
                                             React.Children.toArray(
                                                 Array.from(Array(3)).map((_,i) => {
-                                                    const curYear = year + Math.floor((startingSeason + i + 1) / 3)
+                                                    const curYear = `${year + Math.floor((startingSeason + i + 1) / 3)}`
                                                     const curSzn = (startingSeason + i + 1) % 3
+                                                    const sznText = curSzn === 0 ? "Winter" : (curSzn === 1 ? "Spring/Summer" : "Fall");
 
-                                                    const sznText = curSzn === 0 ? "Winter" : (curSzn === 1 ? "Spring/Summer" : "Fall")
-                                                    return <MenuItem value={`${curYear} ${sznText}`}>{curYear} {sznText}</MenuItem>
+                                                    const seasonNum = curSzn == 0 ? 1 : (curSzn == 1 ? 5 : 9);
+                                                    const termNum = `${curYear.charAt(0)}${curYear.charAt(2)}${curYear.charAt(3)}${seasonNum}`;
+                                                    return <MenuItem value={termNum}>{curYear} {sznText}</MenuItem>
                                                 })
                                             )
                                         }
