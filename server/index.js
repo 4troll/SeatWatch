@@ -1,3 +1,6 @@
+const dotenv = require("dotenv");
+dotenv.config();
+
 const path = require('node:path');
 const express = require("express");
 const bodyParser = require('body-parser');
@@ -31,29 +34,23 @@ const startingSeason = month < 6 ? 0 : (month < 9 ? 1 : 2);
 
 const validTerms = [];
 
-for (let i = 0; i < 4; ++i) {
-	const curYear = `${year + Math.floor((startingSeason + i) / 3)}`
-	const curSzn = (startingSeason + i) % 3
-	const sznText = curSzn === 0 ? "Winter" : (curSzn === 1 ? "Spring/Summer" : "Fall");
 
-	const seasonNum = curSzn == 0 ? 1 : (curSzn == 1 ? 5 : 9);
-	const termNum = `${curYear.charAt(0)}${curYear.charAt(2)}${curYear.charAt(3)}${seasonNum}`;
-
-	validTerms.push(termNum);
-}
-console.log(validTerms);
-const blogSchema = new mongoose.Schema({
-  title:  String, // String is shorthand for {type: String}
-  author: String,
-  body:   String,
-  comments: [{ body: String, date: Date }],
-  date: { type: Date, default: Date.now },
-  hidden: Boolean,
-  meta: {
-    votes: Number,
-    favs:  Number
-  }
+const coursesSchema = new mongoose.Schema({
+	version: String,
+	terms: [{
+		term: String,
+		courses: [{
+			course: String,
+			followers: [{
+				email: String
+			}]
+		}]
+	}]
 });
+
+mongoose.connect(process.env.MONGO_URI);
+
+const Terms = mongoose.model("Terms", coursesSchema);
 
 
 // desiredTermNum: term number in a string
@@ -155,7 +152,15 @@ app.post('/api/getCourse', [middleware.jsonParser], async (req, res) => {
 			var term = body.term;
 			var course = body.course;
 			console.log(body);
-			const response = await getCourseSections(term, course);
+			//const response = await getCourseSections(term, course);
+			Terms.updateOne({"version": process.env.DB_VERSION}, 
+			{$push: {"terms.$[i].courses": {
+				course: course,
+			}}},
+			{arrayFilters: [{"i.term": {$eq: term}}]},
+			function(err, doc) {
+				if (err) console.log(err);
+			});
 			res.json(response);
 			res.status(100);
 		}
@@ -178,3 +183,26 @@ app.listen(PORT, () => {
 app.get('*', (req, res) => {
   res.sendFile(path.resolve(__dirname, '../client/public', 'index.html'));
 });
+
+
+Terms.findOneAndUpdate({"version": process.env.DB_VERSION}, {"terms": []}, {upsert: true}, function(err, doc) {
+	if (err) console.log(err);
+	for (let i = 0; i < 4; ++i) {
+		const curYear = `${year + Math.floor((startingSeason + i) / 3)}`
+		const curSzn = (startingSeason + i) % 3
+		const sznText = curSzn === 0 ? "Winter" : (curSzn === 1 ? "Spring/Summer" : "Fall");
+
+		const seasonNum = curSzn == 0 ? 1 : (curSzn == 1 ? 5 : 9);
+		const termNum = `${curYear.charAt(0)}${curYear.charAt(2)}${curYear.charAt(3)}${seasonNum}`;
+
+		validTerms.push(termNum);
+		Terms.findOneAndUpdate({"version": process.env.DB_VERSION}, {$push: {"terms": {
+			term: termNum,
+			courses: []
+		}}}, {upsert: true}, function(err, doc) {
+			if (err) console.log(err);
+		})
+	}
+	console.log(validTerms);
+});
+
