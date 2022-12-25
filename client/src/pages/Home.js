@@ -183,7 +183,7 @@ export default function Home(){
                                                     const curSzn = (startingSeason + i + 1) % 3
                                                     const sznText = curSzn === 0 ? "Winter" : (curSzn === 1 ? "Spring/Summer" : "Fall");
 
-                                                    const seasonNum = curSzn == 0 ? 1 : (curSzn == 1 ? 5 : 9);
+                                                    const seasonNum = curSzn === 0 ? 1 : (curSzn === 1 ? 5 : 9);
                                                     const termNum = `${curYear.charAt(0)}${curYear.charAt(2)}${curYear.charAt(3)}${seasonNum}`;
                                                     return <MenuItem value={termNum}>{curYear} {sznText}</MenuItem>
                                                 })
@@ -197,7 +197,7 @@ export default function Home(){
                                 <TextField
                                 required
                                 id="outlined-required"
-                                label="Course"
+                                label="Course (case insensitive)"
                                 value={course}
                                 error={invalidCourse()}
                                 helperText={invalidCourse()}

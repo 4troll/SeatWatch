@@ -1,3 +1,6 @@
+const dns = require('node:dns');
+dns.setDefaultResultOrder('ipv4first');
+
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -10,7 +13,7 @@ const webdriverio = require('webdriverio');
 
 const PORT = process.env.PORT || 3001;
 
-const timeout = 1000;
+const timeout = 2000;
 
 const app = express();
 
@@ -59,7 +62,7 @@ async function getCourseSections(desiredTermNum, desiredCourseStr) {
 	// const termArray = desiredTermStr.split(/\s+/);
 	// const seasonNum = termArray[1] == "Winter" ? 1 : (termArray[1] == "Spring/Summer" ? 5 : 9);
 	// const termNum = `${termArray[0].charAt(0)}${termArray[0].charAt(2)}${termArray[0].charAt(3)}${seasonNum}`;
-
+	
 	const seasonStr = desiredTermNum.charAt(3) == 1 ? "Winter" : (desiredTermNum.charAt(3) == 5 ? "Spring/Summer" : "Fall");
 	const desiredTermStr = `20${desiredTermNum.charAt(1)}${desiredTermNum.charAt(2)} ${seasonStr}`
 	console.log(desiredTermStr);
@@ -72,13 +75,18 @@ async function getCourseSections(desiredTermNum, desiredCourseStr) {
 
     const browser = await webdriverio.remote({
         logLevel: 'trace',
+		// beforeSession: () => {
+		// 	dns.setDefaultResultOrder('ipv4first');
+		// },
         capabilities: {
-            browserName: 'chrome'
-        }
+            browserName: 'Chrome'
+        },
+		"goog:chromeOptions": {
+			args: ["--headless"],
+		},
     })
 	await browser.url("https://applicants.mcmaster.ca/psp/prepprd/EMPLOYEE/PSFT_LS/c/COMMUNITY_ACCESS.SSS_BROWSE_CATLG.GBL");
 	browser.switchToFrame(1);
-
 	// First Page
 
 	const careerDropdown = await browser.$("#MCM_SSS_BCC_WRK_ACAD_CAREER");
@@ -121,7 +129,7 @@ async function getCourseSections(desiredTermNum, desiredCourseStr) {
 	await gridLabelWait.waitForExist({ timeout: timeout });
 
 
-	const sectionLabels = await browser.$$("a[ptlinktgt='pt_peoplecode']");
+	const sectionLabels = await browser.$$("a[id*='CLASS_SECTION']");
 	sectionLabels.splice(0,1); // remove first el (that is return link)
 	sectionLabels.splice(-1,1); // remove last el (that is bottom return link)
 	const sectionTextArray = await Promise.all(sectionLabels.map((el) => {
@@ -152,7 +160,7 @@ app.post('/api/getCourse', [middleware.jsonParser], async (req, res) => {
 			var term = body.term;
 			var course = body.course;
 			console.log(body);
-			//const response = await getCourseSections(term, course);
+			const response = await getCourseSections(term, course);
 			Terms.updateOne({"version": process.env.DB_VERSION}, 
 			{$push: {"terms.$[i].courses": {
 				course: course,
