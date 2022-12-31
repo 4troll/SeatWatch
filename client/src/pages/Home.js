@@ -19,6 +19,8 @@ import {
     InputLabel,
     TextField,
     FormHelperText,
+    List,
+    ListItem,
     Modal
   } from '@mui/material';
 import OfferingsTable from '../components/offeringsTable';
@@ -46,6 +48,9 @@ const modalStyle = {
 export default function Home(){
     const [term, setTerm] = useState("");
     const [course, setCourse] = useState("");
+    const [email, setEmail] = useState("");
+    const [fname, setFname] = useState("");
+    const [lname, setLname] = useState("");
     const [submitted, setSubmitted] = useState(false);
 
     const [modalOpen, setModalOpen] = useState(false);
@@ -61,16 +66,37 @@ export default function Home(){
         setSubmitted(false);
         setCourse(event.target.value);
     }
-    function invalidTerm() {
-        if (term.length === 0 && submitted) {
+    function handleChangeEmail(event) {
+        setSubmitted(false);
+        setEmail(event.target.value);
+    }
+    function handleChangeFname(event) {
+        setSubmitted(false);
+        setFname(event.target.value);
+    }
+    function handleChangeLname(event) {
+        setSubmitted(false);
+        setLname(event.target.value);
+    }
+    function invalidField(field) {
+        if (field.length === 0 && submitted) {
             return [true, "This field is required."]
         }
     }
-
-    function invalidCourse() {
-        if (course.length === 0 && submitted) {
-            return [true, "This field is required."]
+    function invalidEmail(field) {
+        if (!(/^[a-z0-9]*@mcmaster\.ca$/gi.test(field)) && submitted) {
+            return [true, "Invalid email address"]
         }
+    }
+    function emailCheck(field) {
+        return /^[a-z0-9]*@mcmaster\.ca$/gi.test(field)
+    }
+
+    function submittable(){
+        return term.length > 0 && course.length > 0 && fname.length > 0 && lname.length > 0 && emailCheck(email)
+    }
+    function unsubmittable(){
+        return !submittable()
     }
 
     async function sendCourseTrackForm(event) {
@@ -78,13 +104,17 @@ export default function Home(){
         setError(false);
         const finalCourse = course.toUpperCase();
         setCourse(finalCourse);
+        setSubmitted(true);
         var formData;
         try {
-            if (term.length > 0 && course.length > 0) {
+            if (submittable()) {
                 // all clear
                 formData = {
                     "term": term,
                     "course": finalCourse,
+                    "email": email,
+                    "fname": fname,
+                    "lname": lname
                 }
                 let response = await fetch("/api/getCourse", {
                     method: "post",
@@ -118,7 +148,7 @@ export default function Home(){
         finally {
             setModalOpen(true);
         }
-        setSubmitted(true);
+        
     }
     return (
         <Fragment>
@@ -158,7 +188,7 @@ export default function Home(){
                 })()}
             </Box>
             </Modal>
-            <Box m={2} pt={3}>
+            <Box m={2} pt={2}>
                 <Container maxWidth="sm">
                     <Paper elevation={2}>
                         <form id="trackCourseForm" 
@@ -169,10 +199,10 @@ export default function Home(){
                                     <InputLabel id="select-term-label">Term</InputLabel>
                                     <Select
                                         labelId="select-term-label"
-                                        id="select-term"
+                                        id="outlined-required"
                                         value={term}
                                         label="Term"
-                                        error={invalidTerm()}
+                                        error={invalidField(term)}
                                         onChange={handleChangeTerm}
                                     >
                                         <MenuItem value={`${year} ${startingSznText}`}>{year} {startingSznText}</MenuItem>
@@ -190,24 +220,79 @@ export default function Home(){
                                             )
                                         }
                                     </Select>
-                                    <FormHelperText sx={{color: "#d32f2f"}}>{invalidTerm()}</FormHelperText>
+                                    <FormHelperText sx={{color: "#d32f2f"}}>{invalidField(term)}</FormHelperText>
                                 </FormControl>
                             </Box>
-                            <Box m={2} pt={2} pb={3}>
+                            <Box m={2} pt={0} pb={0}>
                                 <TextField
                                 required
                                 id="outlined-required"
                                 label="Course (case insensitive)"
                                 value={course}
-                                error={invalidCourse()}
-                                helperText={invalidCourse()}
+                                disabled={term.length === 0}
+                                error={invalidField(course)}
+                                helperText={invalidField(course)}
                                 onChange={handleChangeCourse}
                                 //defaultValue=""
                                 />
-                                <Button form="trackCourseForm" variant="contained" color="primary" type="submit" sx={{mt: 1}}>
-                                    Track
-                                </Button>
                             </Box>
+                            <Box m={2} pt={0} pb={0} fullWidth>
+                                <TextField
+                                required
+                                fullWidth
+                                id="outlined-required"
+                                label="Email (mcmaster.ca)"
+                                value={email}
+                                disabled={course.length === 0}
+                                error={invalidEmail(email)}
+                                helperText={invalidEmail(email)}
+                                onChange={handleChangeEmail}
+                                //defaultValue=""
+                                />
+                            </Box>
+                            <List m={2} pt={0} pb={0} style={{
+                                display: "flex",
+                                flexDirection: "row",
+                                padding: 0
+                            }} 
+                            fullWidth>
+                                <ListItem>
+                                    <TextField
+                                    required
+                                    id="outlined-required"
+                                    label="First name"
+                                    value={fname}
+                                    disabled={course.length === 0}
+                                    error={invalidField(fname)}
+                                    helperText={invalidField(fname)}
+                                    onChange={handleChangeFname}
+                                    //defaultValue=""
+                                    />
+                                </ListItem>
+                                <ListItem>
+                                    <TextField
+                                    required
+                                    id="outlined-required"
+                                    label="Last name"
+                                    value={lname}
+                                    disabled={course.length === 0}
+                                    error={invalidField(lname)}
+                                    helperText={invalidField(lname)}
+                                    onChange={handleChangeLname}
+                                    //defaultValue=""
+                                    />
+                                </ListItem>
+                            </List>
+                            
+                            
+                            <Box m={2} pt={0} pb={3} fullWidth>
+                            <Button 
+                            disabled={unsubmittable()}
+                            form="trackCourseForm" variant="contained" color="primary" type="submit" sx={{mt: 1}}>
+                                Track
+                            </Button>
+                            </Box>
+                            
                         </form>
                     </Paper>
                 </Container>
