@@ -11,16 +11,23 @@ const { MongoClient } = require("mongodb");
 
 const webdriverio = require('webdriverio');
 
-const Bull = require('bull');
-const scrapingQueue = new Bull('scraping');
-
-
 
 const PORT = process.env.PORT || 3001;
 
 const timeout = 2000;
 
 const app = express();
+
+const {Agenda} = require('@hokify/agenda');
+const agenda = new Agenda({db: {address: process.env.MONGO_URI, collection: 'jobs'}});
+async function graceful() {
+	await agenda.stop();
+	process.exit(0);
+}
+
+process.on('SIGTERM', graceful);
+process.on('SIGINT', graceful);
+
 
 var jsonParser = bodyParser.json();
 
@@ -78,9 +85,9 @@ async function getCourseSections(desiredTermNum, desiredCourseStr) {
 			// },
 			capabilities: {
 				browserName: 'Chrome',
-				"goog:chromeOptions": {
-					args: ["--disable-gpu"],
-				},
+				// "goog:chromeOptions": {
+				// 	args: ["--headless", "--disable-gpu"],
+				// },
 			},
 			maxInstances: 4,
 		})
@@ -229,91 +236,100 @@ for (let i = 0; i < 4; ++i) {
 const client = new MongoClient(process.env.MONGO_URI)
 
 
-async function addScrapingTask(term, courseCode) {
-	await scrapingQueue.add({ term, courseCode });
-}
-
-scrapingQueue.process(4, async job => {
-	const term = job.data.term
-	const courseCode = job.data.courseCode
+agenda.define('scrape course', async job => {
+	// console.log(job)
+	const term = job.attrs.data.term
+	const courseCode = job.attrs.data.courseCode
 	try {
-		var cronProm = new Promise((resolve, reject) => {
-			// if (instances >= maxInstances) {
-			// 	return
-			// }
-			// const followersDB = client.db("Followers:" + term)
-			const dataDB = client.db("Data:" + term)
-			// followersDB.listCollections().toArray().then((data) => {
-					// const courseCode = data[indicies[term]].name
-					// instances++
-					getCourseSections(term, courseCode).then(async (response) =>{
-						const followersCollection = followersDB.collection(courseCode)
-						const courseCollection = dataDB.collection(courseCode)
-						await response.forEach(async (obj) => {
-							const updateResponse = await courseCollection.updateOne({section: obj.section}, {$set: {status: obj.status}}, {upsert: true})
-							const isModified = !!(updateResponse.modifiedCount)
-							const isInserted = !!(updateResponse.upsertedCount)
-							const tString = term.charAt(3) == 1 ? "Winter" : (term.charAt(3) == 5 ? "Spring/Summer" : "Fall");
-							if (isModified && obj.status == "Open"){
-								const mailList = []
-								await followersCollection.find().forEach(async(follower) => {
-									
-									// alert user
-									console.log(courseCode)
-									mailList.push(follower.email)
-								})
-								let info = await transporter.sendMail({
-									from: `"SeatWatch" <${process.env.EMAIL_ADDRESS}>`, // sender address
-									bcc: mailList.join(","), // list of receivers
-									subject: `${courseCode} ${obj.section} ${tString} Availability`, // Subject line
-									text: `To whom it may concern,\r\n\r\n${courseCode}'s ${obj.section} offering is now available in ${tString} term.\r\n\r\n-SeatWatch`, // plain text body
-									html: `To whom it may concern,<br><br>${courseCode}'s ${obj.section} offering is now available in ${tString} term.<br><br>-SeatWatch`, // html body
-								});
-								console.log("Preview URL: %s", nmailer.getTestMessageUrl(info));
-		
-							}
-						})
+		// if (instances >= maxInstances) {
+		// 	return
+		// }
+		const followersDB = client.db("Followers:" + term)
+		const dataDB = client.db("Data:" + term)
+		// followersDB.listCollections().toArray().then((data) => {
+				// const courseCode = data[indicies[term]].name
+				// instances++
+				getCourseSections(term, courseCode).then(async (response) =>{
+					const followersCollection = followersDB.collection(courseCode)
+					const courseCollection = dataDB.collection(courseCode)
+					await response.forEach(async (obj) => {
+						const updateResponse = await courseCollection.updateOne({section: obj.section}, {$set: {status: obj.status}}, {upsert: true})
+						const isModified = !!(updateResponse.modifiedCount)
+						const isInserted = !!(updateResponse.upsertedCount)
+						const tString = term.charAt(3) == 1 ? "Winter" : (term.charAt(3) == 5 ? "Spring/Summer" : "Fall");
+						if (isModified && obj.status == "Open"){
+							const mailList = []
+							await followersCollection.find().forEach(async(follower) => {
+								
+								// alert user
+								console.log(courseCode)
+								mailList.push(follower.email)
+							})
+							let info = await transporter.sendMail({
+								from: `"SeatWatch" <${process.env.EMAIL_ADDRESS}>`, // sender address
+								bcc: mailList.join(","), // list of receivers
+								subject: `${courseCode} ${obj.section} ${tString} Availability`, // Subject line
+								text: `To whom it may concern,\r\n\r\n${courseCode}'s ${obj.section} offering is now available in ${tString} term.\r\n\r\n-SeatWatch`, // plain text body
+								html: `To whom it may concern,<br><br>${courseCode}'s ${obj.section} offering is now available in ${tString} term.<br><br>-SeatWatch`, // html body
+							});
+							console.log("Preview URL: %s", nmailer.getTestMessageUrl(info));
+							done();
+						}
 					})
-					
-				// }
+				})
 				
-			// })
+			// }
 			
-
-		}).then(()=>{
-			client.close()
+		// })
 			
-		})
 	} catch(e) {
-		
+		throw e;
 	}
 	
-});
+}, { priority: 'high', concurrency: 4 });
 
 
-async function scheduleScrapingTasks() {
+agenda.define("queueCourses", async () => {
 	validTerms.forEach(function (term,index) {
-		const followersDB = client.db("Followers:" + term)
+		const termStr = term
+		console.log(termStr)
+		const followersDB = client.db("Followers:" + termStr)
+
 		// const dataDB = client.db("Data:" + term)
 		followersDB.listCollections().toArray().then((data) => {
-			data.forEach(async (courseCode) => {
-				await addScrapingTask(term,courseCode);
+			data.forEach(async (courseEl) => {
+				const courseCode = courseEl.name
+				console.log(termStr, courseCode)
+				console.log(typeof(termStr))
+
+				await agenda.schedule('in 1 second', 'scrape course', { term: termStr, courseCode: courseCode });
 			})
 		});
 	});
-}
+});
 
-scrapingQueue.add(
-	{},
-	{
-	  repeat: {
-		every: 1000
-	  },
-	  jobId: 'scrapeCourses',
-	  removeOnComplete: true,
-	  removeOnFail: true
-	},
-	async (job) => {
-	  await scheduleScrapingTasks();
-	}
-  );
+(async function () {
+	await agenda.start();
+	await agenda.schedule('in 1 second', 'queueCourses');
+})();
+
+// scrapingQueue.add(
+// 	{},
+// 	{
+// 	  repeat: {
+// 		every: 1000,
+// 		limit: 100
+// 	  },
+// 	  jobId: 'scrapeCourses',
+// 	  removeOnComplete: true,
+// 	  removeOnFail: true
+// 	},
+// 	async (job) => {
+// 		console.log(job)
+// 		await scheduleScrapingTasks();
+// 	}
+//   );
+//   scrapingQueue.add(
+// 	{term: "2231", course: "COMPSCI 1DM3"}
+//   );
+// scrapingQueue.start();
