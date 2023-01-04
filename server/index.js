@@ -302,7 +302,10 @@ agenda.define("queueCourses", async () => {
 				console.log(termStr, courseCode)
 				console.log(typeof(termStr))
 
-				await agenda.schedule('in 1 second', 'scrape course', { term: termStr, courseCode: courseCode });
+				await agenda.create('scrape course', { term: termStr, courseCode: courseCode })
+				.unique({"data.term": termStr, "data.courseCode": "courseCode"}, { insertOnly: true })
+				.schedule('now')
+				.save()
 			})
 		});
 	});
@@ -310,7 +313,10 @@ agenda.define("queueCourses", async () => {
 
 (async function () {
 	await agenda.start();
-	await agenda.schedule('in 1 second', 'queueCourses');
+	await agenda.create('queueCourses', {id: 1})
+	.unique({"data.id": 1}, { insertOnly: true })
+	.repeatEvery('1 minute').save()
+	
 })();
 
 // scrapingQueue.add(
