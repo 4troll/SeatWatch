@@ -29,6 +29,7 @@ import { theme } from "./theme.js";
 import Home from './pages/Home.js';
 import About from './pages/About.js';
 import Contact from './pages/Contact.js';
+import Unsubscribe from './pages/Unsubscribe.js';
 
 const pages = ['Home', 'About', 'Contact'];
 // const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
@@ -212,6 +213,7 @@ function App() {
 			<Route path="/home" element={<Home />} />
 			<Route path="/about" element={<About />} />
 			<Route path="/contact" element={<Contact />} />
+			<Route path="/unsubscribe/:id" element={<Unsubscribe />} />
 		</Routes>
     </BrowserRouter>
 	</ThemeProvider>

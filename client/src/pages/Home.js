@@ -51,6 +51,7 @@ export default function Home(){
     const [email, setEmail] = useState("");
     const [fname, setFname] = useState("");
     const [lname, setLname] = useState("");
+    const [waiting, setWaiting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
     const [modalOpen, setModalOpen] = useState(false);
@@ -93,7 +94,7 @@ export default function Home(){
     }
 
     function submittable(){
-        return term.length > 0 && course.length > 0 && fname.length > 0 && lname.length > 0 && emailCheck(email)
+        return term.length > 0 && course.length > 0 && emailCheck(email) && !waiting
     }
     function unsubmittable(){
         return !submittable()
@@ -105,16 +106,21 @@ export default function Home(){
         const finalCourse = course.toUpperCase();
         setCourse(finalCourse);
         setSubmitted(true);
+        setWaiting(true);
         var formData;
         try {
             if (submittable()) {
                 // all clear
+                console.log(term)
+                const termArray = term.split(/\s+/);
+		        const seasonNum = termArray[1] == "Winter" ? 1 : (termArray[1] == "Spring/Summer" ? 5 : 9);
+		        const termNum = `${termArray[0].charAt(0)}${termArray[0].charAt(2)}${termArray[0].charAt(3)}${seasonNum}`;
                 formData = {
-                    "term": term,
+                    "term": termNum,
                     "course": finalCourse,
                     "email": email,
-                    "fname": fname,
-                    "lname": lname
+                    "fname": fname || "Anonymous",
+                    "lname": lname || "Anonymous"
                 }
                 let response = await fetch("/api/getCourse", {
                     method: "post",
@@ -147,6 +153,7 @@ export default function Home(){
         }
         finally {
             setModalOpen(true);
+            setWaiting(false);
         }
         
     }
@@ -194,7 +201,11 @@ export default function Home(){
                         <form id="trackCourseForm" 
                         onSubmit={sendCourseTrackForm} 
                         noValidate>
-                            <Box m={2} pt={3}>
+                            <Typography m={2} pt={1} variant="h6">
+                                    Track McMaster course availability
+                            </Typography>
+                            <Box m={2} pt={0}>
+                                
                                 <FormControl fullWidth>
                                     <InputLabel id="select-term-label">Term</InputLabel>
                                     <Select
@@ -250,47 +261,47 @@ export default function Home(){
                                 //defaultValue=""
                                 />
                             </Box>
-                            <List m={2} pt={0} pb={0} style={{
-                                display: "flex",
-                                flexDirection: "row",
-                                padding: 0
-                            }} 
-                            fullWidth>
-                                <ListItem>
-                                    <TextField
-                                    required
-                                    id="outlined-required"
-                                    label="First name"
-                                    value={fname}
-                                    disabled={course.length === 0}
-                                    error={invalidField(fname)}
-                                    helperText={invalidField(fname)}
-                                    onChange={handleChangeFname}
-                                    //defaultValue=""
-                                    />
-                                </ListItem>
-                                <ListItem>
-                                    <TextField
-                                    required
-                                    id="outlined-required"
-                                    label="Last name"
-                                    value={lname}
-                                    disabled={course.length === 0}
-                                    error={invalidField(lname)}
-                                    helperText={invalidField(lname)}
-                                    onChange={handleChangeLname}
-                                    //defaultValue=""
-                                    />
-                                </ListItem>
-                            </List>
+                            <Box>
+                                <Typography m={2} variant="h7">
+                                        Names are optional and will remain confidential.
+                                </Typography>
+                                <List  style={{
+                                    display: "flex",
+                                    flexDirection: "row",
+                                    padding: 0,
+                                }} 
+                                fullWidth>
+                                    <ListItem>
+                                        <TextField
+                                        id="outlined-required"
+                                        label="First name"
+                                        value={fname}
+                                        disabled={course.length === 0}
+                                        onChange={handleChangeFname}
+                                        //defaultValue=""
+                                        />
+                                    </ListItem>
+                                    <ListItem>
+                                        <TextField
+                                        id="outlined-required"
+                                        label="Last name"
+                                        value={lname}
+                                        disabled={course.length === 0}
+                                        onChange={handleChangeLname}
+                                        //defaultValue=""
+                                        />
+                                    </ListItem>
+                                </List>
+                            </Box>
                             
                             
                             <Box m={2} pt={0} pb={3} fullWidth>
                             <Button 
                             disabled={unsubmittable()}
                             form="trackCourseForm" variant="contained" color="primary" type="submit" sx={{mt: 1}}>
-                                Track
+                                Watch
                             </Button>
+                            {waiting ? "Waiting..." : ""}
                             </Box>
                             
                         </form>

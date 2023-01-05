@@ -172,6 +172,39 @@ function emailCheck(field) {
 	return /^[a-z0-9]*@mcmaster\.ca$/gi.test(field)
 }
 
+app.post('/api/unsubscribe', [middleware.jsonParser], async (req, res) => {
+	if (req) {
+		try {
+			console.log("got")
+			var body = req.body
+			var email = body.email
+			if (!emailCheck(email)) {
+				console.log("error")
+				throw new Error("Invalid Email")
+			}
+			
+			await validTerms.forEach(async function (term,index) {
+				const termStr = term
+				const followersDB = client.db("Followers:" + termStr)
+				// const dataDB = client.db("Data:" + term)
+				await followersDB.listCollections().toArray().then(async (data) => {
+					await data.forEach(async (courseEl) => {
+						const courseCode = courseEl.name
+						const followersCollection = followersDB.collection(courseCode)
+						await followersCollection.deleteOne({email: email});
+					})
+				})
+			})
+			res.json({done: true})
+			res.status(100)
+		} catch(e) {
+			res.status(404).send(e);
+		} finally {
+
+		}
+	}
+});
+
 app.post('/api/getCourse', [middleware.jsonParser], async (req, res) => {
 	if (req) {
 		try {
@@ -179,8 +212,8 @@ app.post('/api/getCourse', [middleware.jsonParser], async (req, res) => {
 			var term = body.term;
 			var course = body.course;
 			var email = body.email;
-			var fname = body.fname;
-			var lname = body.lname;
+			var fname = body.fname || "Anonymous";
+			var lname = body.lname || "Anonymous";
 			const response = await getCourseSections(term, course);
 			// Terms.updateOne({"version": process.env.DB_VERSION}, 
 			// {$set: {"terms.$[i].courses.$[j].followers.$[k]": {
@@ -203,7 +236,6 @@ app.post('/api/getCourse', [middleware.jsonParser], async (req, res) => {
 		}
 		catch(err) {
 			res.status(404).send(err);
-			throw err
 		}
 		finally {
 
@@ -237,7 +269,7 @@ const client = new MongoClient(process.env.MONGO_URI)
 
 
 agenda.define('scrape course', async job => {
-	// console.log(job)
+	console.log(job)
 	const term = job.attrs.data.term
 	const courseCode = job.attrs.data.courseCode
 	try {
@@ -258,22 +290,22 @@ agenda.define('scrape course', async job => {
 						const isInserted = !!(updateResponse.upsertedCount)
 						const tString = term.charAt(3) == 1 ? "Winter" : (term.charAt(3) == 5 ? "Spring/Summer" : "Fall");
 						if (isModified && obj.status == "Open"){
-							const mailList = []
 							await followersCollection.find().forEach(async(follower) => {
-								
-								// alert user
 								console.log(courseCode)
-								mailList.push(follower.email)
+								const email = follower.email
+								const emailArr = email.split("@")
+								const userId = emailArr[0]
+								
+								const unsubLink = `http://${process.env.HOST_NAME}/unsubscribe/${userId}`
+
+								await transporter.sendMail({
+									from: `"SeatWatch" <${process.env.EMAIL_ADDRESS}>`, // sender address
+									bcc: email, // list of receivers
+									subject: `${courseCode} ${obj.section} ${tString} Availability`, // Subject line
+									text: `Hello ${follower.fname},\r\n\r\n${courseCode}'s ${obj.section} offering is now available in ${tString} term.\r\n\r\n-SeatWatch\r\n\r\nUnsubscribe from all courses: ${unsubLink}`, // plain text body
+									html: `Hello ${follower.fname},<br><br>${courseCode}'s ${obj.section} offering is now available in ${tString} term.<br><br>-SeatWatch<br><br><a href="${unsubLink}">Unsubscribe from all watched courses</a>`, // html body
+								});
 							})
-							let info = await transporter.sendMail({
-								from: `"SeatWatch" <${process.env.EMAIL_ADDRESS}>`, // sender address
-								bcc: mailList.join(","), // list of receivers
-								subject: `${courseCode} ${obj.section} ${tString} Availability`, // Subject line
-								text: `To whom it may concern,\r\n\r\n${courseCode}'s ${obj.section} offering is now available in ${tString} term.\r\n\r\n-SeatWatch`, // plain text body
-								html: `To whom it may concern,<br><br>${courseCode}'s ${obj.section} offering is now available in ${tString} term.<br><br>-SeatWatch`, // html body
-							});
-							console.log("Preview URL: %s", nmailer.getTestMessageUrl(info));
-							done();
 						}
 					})
 				})
@@ -303,7 +335,7 @@ agenda.define("queueCourses", async () => {
 				console.log(typeof(termStr))
 
 				await agenda.create('scrape course', { term: termStr, courseCode: courseCode })
-				.unique({"data.term": termStr, "data.courseCode": "courseCode"}, { insertOnly: true })
+				.unique({"data.term": termStr, "data.courseCode": courseCode})
 				.schedule('now')
 				.save()
 			})
