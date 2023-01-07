@@ -9,7 +9,8 @@
     "client": "npm run start --prefix client",
     "server": "nodemon server/index.js",
     "dev": "concurrently \"npm run client\" \"npm run server\"",
-    "wdio": "wdio run ./wdio.conf.js"
+    "wdio": "wdio run ./wdio.conf.js",
+    "build": "cd client && npm install --no-shrinkwrap --legacy-peer-deps"
   },
   "repository": {
     "type": "git",
