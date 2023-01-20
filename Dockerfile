@@ -1,5 +1,3 @@
-
-
 FROM node:16
 
 ENV DEBIAN_FRONTEND noninteractive

@@ -289,32 +289,34 @@ agenda.define('scrape course', async job => {
 				// const courseCode = data[indicies[term]].name
 				// instances++
 				getCourseSections(term, courseCode).then(async (response) =>{
-					const followersCollection = followersDB.collection(courseCode)
-					const courseCollection = dataDB.collection(courseCode)
-					await response.forEach(async (obj) => {
-						const updateResponse = await courseCollection.updateOne({section: obj.section}, {$set: {status: obj.status}}, {upsert: true})
-						const isModified = !!(updateResponse.modifiedCount)
-						const isInserted = !!(updateResponse.upsertedCount)
-						const tString = term.charAt(3) == 1 ? "Winter" : (term.charAt(3) == 5 ? "Spring/Summer" : "Fall");
-						if (isModified && obj.status == "Open"){
-							await followersCollection.find().forEach(async(follower) => {
-								console.log(courseCode)
-								const email = follower.email
-								const emailArr = email.split("@")
-								const userId = emailArr[0]
-								
-								const unsubLink = `http://${process.env.HOST_NAME}/unsubscribe/${userId}`
+					if (response) {
+						const followersCollection = followersDB.collection(courseCode)
+						const courseCollection = dataDB.collection(courseCode)
+						await response.forEach(async (obj) => {
+							const updateResponse = await courseCollection.updateOne({section: obj.section}, {$set: {status: obj.status}}, {upsert: true})
+							const isModified = !!(updateResponse.modifiedCount)
+							const isInserted = !!(updateResponse.upsertedCount)
+							const tString = term.charAt(3) == 1 ? "Winter" : (term.charAt(3) == 5 ? "Spring/Summer" : "Fall");
+							if (isModified && obj.status == "Open"){
+								await followersCollection.find().forEach(async(follower) => {
+									console.log(courseCode)
+									const email = follower.email
+									const emailArr = email.split("@")
+									const userId = emailArr[0]
+									
+									const unsubLink = `http://${process.env.HOST_NAME}/unsubscribe/${userId}`
 
-								await transporter.sendMail({
-									from: `"SeatWatch" <${process.env.EMAIL_ADDRESS}>`, // sender address
-									bcc: email, // list of receivers
-									subject: `${courseCode} ${obj.section} ${tString} Availability`, // Subject line
-									text: `Hello ${follower.fname},\r\n\r\n${courseCode}'s ${obj.section} offering is now available in ${tString} term.\r\n\r\n-SeatWatch\r\n\r\nUnsubscribe from all courses: ${unsubLink}`, // plain text body
-									html: `Hello ${follower.fname},<br><br>${courseCode}'s ${obj.section} offering is now available in ${tString} term.<br><br>-SeatWatch<br><br><a href="${unsubLink}">Unsubscribe from all watched courses</a>`, // html body
-								});
-							})
-						}
-					})
+									await transporter.sendMail({
+										from: `"SeatWatch" <${process.env.EMAIL_ADDRESS}>`, // sender address
+										bcc: email, // list of receivers
+										subject: `${courseCode} ${obj.section} ${tString} Availability`, // Subject line
+										text: `Hello ${follower.fname},\r\n\r\n${courseCode}'s ${obj.section} offering is now available in ${tString} term.\r\n\r\n-SeatWatch\r\n\r\nUnsubscribe from all courses: ${unsubLink}`, // plain text body
+										html: `Hello ${follower.fname},<br><br>${courseCode}'s ${obj.section} offering is now available in ${tString} term.<br><br>-SeatWatch<br><br><a href="${unsubLink}">Unsubscribe from all watched courses</a>`, // html body
+									});
+								})
+							}
+						})
+					}
 				})
 				
 			// }
