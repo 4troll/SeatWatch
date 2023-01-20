@@ -322,39 +322,47 @@ agenda.define('scrape course', async job => {
 		// })
 			
 	} catch(e) {
-		console.error(e);
+		throw e;
 	}
 	
 }, { priority: 'high', concurrency: 4 });
 
 
 agenda.define("queueCourses", async () => {
-	validTerms.forEach(function (term,index) {
-		const termStr = term
-		console.log(termStr)
-		const followersDB = client.db("Followers:" + termStr)
-
-		// const dataDB = client.db("Data:" + term)
-		followersDB.listCollections().toArray().then((data) => {
-			data.forEach(async (courseEl) => {
-				const courseCode = courseEl.name
-				console.log(termStr, courseCode)
-				console.log(typeof(termStr))
-
-				await agenda.create('scrape course', { term: termStr, courseCode: courseCode })
-				.unique({"data.term": termStr, "data.courseCode": courseCode})
-				.schedule('now')
-				.save()
-			})
+	try {
+		validTerms.forEach(function (term,index) {
+			const termStr = term
+			console.log(termStr)
+			const followersDB = client.db("Followers:" + termStr)
+	
+			// const dataDB = client.db("Data:" + term)
+			followersDB.listCollections().toArray().then((data) => {
+				data.forEach(async (courseEl) => {
+					const courseCode = courseEl.name
+					console.log(termStr, courseCode)
+					console.log(typeof(termStr))
+	
+					await agenda.create('scrape course', { term: termStr, courseCode: courseCode })
+					.unique({"data.term": termStr, "data.courseCode": courseCode})
+					.schedule('now')
+					.save()
+				})
+			});
 		});
-	});
+	} catch (e) {
+		console.error(e)
+	}
 });
 
 (async function () {
-	await agenda.start();
-	await agenda.create('queueCourses', {id: 1})
-	.unique({"data.id": 1}, { insertOnly: true })
-	.repeatEvery('1 minute').save()
+	try {
+		await agenda.start();
+		await agenda.create('queueCourses', {id: 1})
+		.unique({"data.id": 1}, { insertOnly: true })
+		.repeatEvery('1 minute').save()
+	} catch(e) {
+		console.error(e)
+	}
 	
 })();
 
