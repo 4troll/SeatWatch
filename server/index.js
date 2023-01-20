@@ -159,7 +159,7 @@ async function getCourseSections(desiredTermNum, desiredCourseStr) {
 		browser.deleteSession()
 		return result;
 	} catch (e) {
-		throw e;
+		console.error(e)
 	}
 }
 class InvalidTermError extends Error {
