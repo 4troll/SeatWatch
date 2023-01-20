@@ -22,7 +22,7 @@ RUN npm ci --only=production
 COPY . .
 
 RUN cd client 
-RUN npm install --no-shrinkwrap --legacy-peer-deps && npm run build
+RUN npm install --no-shrinkwrap --legacy-peer-deps && npm i react-scripts && react-scripts build
 RUN cd ..
 
 EXPOSE 8080
