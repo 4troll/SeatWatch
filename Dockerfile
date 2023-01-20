@@ -25,6 +25,7 @@ COPY . .
 
 RUN cd client 
 RUN npm install --no-shrinkwrap --legacy-peer-deps
+RUN npm install react-scripts
 RUN react-scripts build
 RUN cd ..
 
