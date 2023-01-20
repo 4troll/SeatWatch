@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \ 
     && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list
-RUN apt-get update && apt-get -y install google-chrome-stable react-scripts
+RUN apt-get update && apt-get -y install google-chrome-stable
 
 # Create app directory
 WORKDIR /app
@@ -22,7 +22,7 @@ RUN npm ci --only=production
 COPY . .
 
 RUN cd client 
-RUN npm install --no-shrinkwrap --legacy-peer-deps && react-scripts build
+RUN npm install --no-shrinkwrap --legacy-peer-deps && ./build/node_modules/.bin/react-scripts build
 RUN cd ..
 
 EXPOSE 8080
