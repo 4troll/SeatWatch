@@ -85,9 +85,10 @@ async function getCourseSections(desiredTermNum, desiredCourseStr) {
 			// },
 			capabilities: {
 				browserName: 'Chrome',
-				// "goog:chromeOptions": {
-				// 	args: ["--headless", "--disable-gpu"],
-				// },
+				"goog:chromeOptions": {
+					args: ["--headless", "--disable-gpu"],
+					binary: "/usr/bin/google-chrome-stable",
+				},
 			},
 			maxInstances: 4,
 		})
