@@ -322,7 +322,7 @@ agenda.define('scrape course', async job => {
 		// })
 			
 	} catch(e) {
-		throw e;
+		console.error(e);
 	}
 	
 }, { priority: 'high', concurrency: 4 });
