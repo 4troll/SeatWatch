@@ -20,10 +20,10 @@ RUN npm install
 # If you are building your code for production
 RUN npm ci --only=production
 
-# RUN cd client 
-# RUN npm install --no-shrinkwrap --legacy-peer-deps
-# RUN react-scripts build
-# RUN cd ..
+RUN cd client 
+RUN npm install --no-shrinkwrap --legacy-peer-deps
+RUN react-scripts build
+RUN cd ..
 
 # Bundle app source
 COPY . .
